@@ -63,10 +63,16 @@ const Index = () => {
   }, [currentQuestionIndex, isInterviewActive]);
 
   const handleStartInterview = useCallback(() => {
+    // Check if user is logged in before starting interview
+    if (!user) {
+      setIsAuthModalOpen(true);
+      return;
+    }
+    
     setIsInterviewActive(true);
     setCurrentQuestionIndex(0);
     setStatus('speaking');
-  }, []);
+  }, [user]);
 
   const handleEndInterview = useCallback(() => {
     setIsInterviewActive(false);
@@ -84,6 +90,7 @@ const Index = () => {
 
   const handleAuthSuccess = useCallback((authUser: { name: string; email: string }) => {
     setUser(authUser);
+    setIsAuthModalOpen(false);
   }, []);
 
   const handleSignOut = useCallback(() => {

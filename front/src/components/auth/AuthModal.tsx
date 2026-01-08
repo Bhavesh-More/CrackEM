@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Mail, Lock, User, Loader2 } from 'lucide-react';
+import { Mail, Lock, User, Loader2, Eye, EyeOff } from 'lucide-react';
+import { api } from '@/lib/api';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -30,13 +31,16 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }: AuthModalProps) => {
   // Sign In form state
   const [signInEmail, setSignInEmail] = useState('');
   const [signInPassword, setSignInPassword] = useState('');
+  const [signInPasswordVisible, setSignInPasswordVisible] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
   // Sign Up form state
   const [signUpName, setSignUpName] = useState('');
   const [signUpEmail, setSignUpEmail] = useState('');
   const [signUpPassword, setSignUpPassword] = useState('');
+  const [signUpPasswordVisible, setSignUpPasswordVisible] = useState(false);
   const [signUpConfirmPassword, setSignUpConfirmPassword] = useState('');
+  const [signUpConfirmPasswordVisible, setSignUpConfirmPasswordVisible] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
 
   const validateEmail = (email: string) => {
@@ -102,12 +106,32 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }: AuthModalProps) => {
 
     setIsLoading(true);
     setErrors({});
+    setSuccessMessage('');
 
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      const response = await api.signin({
+        email: signInEmail,
+        password: signInPassword,
+      });
 
-    setIsLoading(false);
-    onAuthSuccess({ name: 'User', email: signInEmail });
-    onClose();
+      if (response.status === 'success' && response.user) {
+        onAuthSuccess(response.user);
+        onClose();
+      } else {
+        setErrors({ 
+          email: response.message || 'Invalid credentials',
+          password: response.message || 'Invalid credentials'
+        });
+      }
+    } catch (error) {
+      console.error('Sign in error:', error);
+      setErrors({ 
+        email: 'Network error. Please try again.',
+        password: 'Network error. Please try again.'
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -116,17 +140,36 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }: AuthModalProps) => {
 
     setIsLoading(true);
     setErrors({});
+    setSuccessMessage('');
 
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      const response = await api.signup({
+        username: signUpName,
+        email: signUpEmail,
+        password: signUpPassword,
+      });
 
-    setIsLoading(false);
-    setSuccessMessage('Account created successfully! You can now sign in.');
-    
-    setTimeout(() => {
-      setActiveTab('signin');
-      setSuccessMessage('');
-      setSignInEmail(signUpEmail);
-    }, 2000);
+      if (response.status === 'success') {
+        setSuccessMessage(response.message || 'Account created successfully! You can now sign in.');
+        
+        setTimeout(() => {
+          setActiveTab('signin');
+          setSuccessMessage('');
+          setSignInEmail(signUpEmail);
+        }, 2000);
+      } else {
+        setErrors({ 
+          email: response.message || 'Sign up failed. Please try again.'
+        });
+      }
+    } catch (error) {
+      console.error('Sign up error:', error);
+      setErrors({ 
+        email: 'Network error. Please try again.'
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGoogleAuth = async () => {
@@ -140,10 +183,13 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }: AuthModalProps) => {
   const resetForm = () => {
     setSignInEmail('');
     setSignInPassword('');
+    setSignInPasswordVisible(false);
     setSignUpName('');
     setSignUpEmail('');
     setSignUpPassword('');
+    setSignUpPasswordVisible(false);
     setSignUpConfirmPassword('');
+    setSignUpConfirmPasswordVisible(false);
     setRememberMe(false);
     setAgreeTerms(false);
     setErrors({});
@@ -271,12 +317,24 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }: AuthModalProps) => {
                           <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                           <Input
                             id="signin-password"
-                            type="password"
+                            type={signInPasswordVisible ? "text" : "password"}
                             placeholder="Enter your password"
                             value={signInPassword}
                             onChange={(e) => setSignInPassword(e.target.value)}
-                            className="pl-10 bg-secondary border-border focus:border-primary focus:ring-primary transition-all duration-200"
+                            className="pl-10 pr-10 bg-secondary border-border focus:border-primary focus:ring-primary transition-all duration-200"
                           />
+                          <button
+                            type="button"
+                            onClick={() => setSignInPasswordVisible(!signInPasswordVisible)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                            aria-label={signInPasswordVisible ? "Hide password" : "Show password"}
+                          >
+                            {signInPasswordVisible ? (
+                              <EyeOff className="w-4 h-4" />
+                            ) : (
+                              <Eye className="w-4 h-4" />
+                            )}
+                          </button>
                         </div>
                         {errors.password && <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs text-destructive">{errors.password}</motion.p>}
                       </motion.div>
@@ -433,12 +491,24 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }: AuthModalProps) => {
                           <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                           <Input
                             id="signup-password"
-                            type="password"
+                            type={signUpPasswordVisible ? "text" : "password"}
                             placeholder="Create a password"
                             value={signUpPassword}
                             onChange={(e) => setSignUpPassword(e.target.value)}
-                            className="pl-10 bg-secondary border-border focus:border-primary focus:ring-primary transition-all duration-200"
+                            className="pl-10 pr-10 bg-secondary border-border focus:border-primary focus:ring-primary transition-all duration-200"
                           />
+                          <button
+                            type="button"
+                            onClick={() => setSignUpPasswordVisible(!signUpPasswordVisible)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                            aria-label={signUpPasswordVisible ? "Hide password" : "Show password"}
+                          >
+                            {signUpPasswordVisible ? (
+                              <EyeOff className="w-4 h-4" />
+                            ) : (
+                              <Eye className="w-4 h-4" />
+                            )}
+                          </button>
                         </div>
                         {errors.password && <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs text-destructive">{errors.password}</motion.p>}
                       </motion.div>
@@ -454,12 +524,24 @@ const AuthModal = ({ isOpen, onClose, onAuthSuccess }: AuthModalProps) => {
                           <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                           <Input
                             id="signup-confirm"
-                            type="password"
+                            type={signUpConfirmPasswordVisible ? "text" : "password"}
                             placeholder="Confirm your password"
                             value={signUpConfirmPassword}
                             onChange={(e) => setSignUpConfirmPassword(e.target.value)}
-                            className="pl-10 bg-secondary border-border focus:border-primary focus:ring-primary transition-all duration-200"
+                            className="pl-10 pr-10 bg-secondary border-border focus:border-primary focus:ring-primary transition-all duration-200"
                           />
+                          <button
+                            type="button"
+                            onClick={() => setSignUpConfirmPasswordVisible(!signUpConfirmPasswordVisible)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                            aria-label={signUpConfirmPasswordVisible ? "Hide password" : "Show password"}
+                          >
+                            {signUpConfirmPasswordVisible ? (
+                              <EyeOff className="w-4 h-4" />
+                            ) : (
+                              <Eye className="w-4 h-4" />
+                            )}
+                          </button>
                         </div>
                         {errors.confirmPassword && <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs text-destructive">{errors.confirmPassword}</motion.p>}
                       </motion.div>
