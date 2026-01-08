@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
-import { User, Smile } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
+import { gsap } from 'gsap';
+import { Smile } from 'lucide-react';
 
 interface AIAvatarProps {
   isSpeaking: boolean;
@@ -8,21 +10,91 @@ interface AIAvatarProps {
 
 const AIAvatar = ({ isSpeaking, status }: AIAvatarProps) => {
   const [mounted, setMounted] = useState(false);
+  const avatarRef = useRef<HTMLDivElement>(null);
+  const glowRef = useRef<HTMLDivElement>(null);
+  const soundWavesRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  // GSAP breathing animation for avatar
+  useEffect(() => {
+    if (!avatarRef.current) return;
+
+    const ctx = gsap.context(() => {
+      gsap.to(avatarRef.current, {
+        scale: 1.03,
+        duration: 2,
+        ease: 'sine.inOut',
+        repeat: -1,
+        yoyo: true,
+      });
+    });
+
+    return () => ctx.revert();
+  }, []);
+
+  // GSAP glow pulse animation
+  useEffect(() => {
+    if (!glowRef.current) return;
+
+    const ctx = gsap.context(() => {
+      gsap.to(glowRef.current, {
+        opacity: 0.5,
+        scale: 1.1,
+        duration: 1.5,
+        ease: 'sine.inOut',
+        repeat: -1,
+        yoyo: true,
+      });
+    });
+
+    return () => ctx.revert();
+  }, []);
+
+  // GSAP sound wave animation when speaking
+  useEffect(() => {
+    if (!soundWavesRef.current) return;
+
+    const bars = soundWavesRef.current.querySelectorAll('.gsap-wave-bar');
+    
+    const ctx = gsap.context(() => {
+      if (isSpeaking) {
+        bars.forEach((bar, i) => {
+          gsap.to(bar, {
+            scaleY: 1 + Math.random() * 1.5,
+            duration: 0.15 + Math.random() * 0.15,
+            ease: 'sine.inOut',
+            repeat: -1,
+            yoyo: true,
+            delay: i * 0.05,
+          });
+        });
+      } else {
+        gsap.to(bars, {
+          scaleY: 0.3,
+          duration: 0.3,
+          ease: 'power2.out',
+        });
+      }
+    });
+
+    return () => ctx.revert();
+  }, [isSpeaking]);
+
   return (
-    <div 
-      className={`flex flex-col items-center gap-8 transition-opacity duration-500 ${
-        mounted ? 'opacity-100' : 'opacity-0'
-      }`}
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: mounted ? 1 : 0, y: mounted ? 0 : 20 }}
+      transition={{ duration: 0.6, ease: 'easeOut' }}
+      className="flex flex-col items-center gap-8"
     >
       {/* Avatar Container */}
-      <div className="avatar-container">
+      <div className="avatar-container" ref={avatarRef}>
         {/* Outer glow ring */}
         <div 
+          ref={glowRef}
           className="absolute inset-[-4px] rounded-full opacity-30"
           style={{
             background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)))',
@@ -31,13 +103,33 @@ const AIAvatar = ({ isSpeaking, status }: AIAvatarProps) => {
         />
         
         {/* Animated gradient border */}
-        <div className="avatar-circle" />
+        <motion.div 
+          className="absolute inset-0 rounded-full bg-gradient-to-br from-primary via-accent to-primary"
+          animate={{
+            rotate: [0, 360],
+          }}
+          transition={{
+            duration: 20,
+            repeat: Infinity,
+            ease: 'linear',
+          }}
+        />
         
         {/* Inner white circle with face */}
         <div className="avatar-inner">
           <div className="avatar-face">
             {/* Friendly face icon */}
-            <div className="relative">
+            <motion.div 
+              className="relative"
+              animate={{
+                y: [0, -5, 0],
+              }}
+              transition={{
+                duration: 3,
+                repeat: Infinity,
+                ease: 'easeInOut',
+              }}
+            >
               <div 
                 className="w-20 h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center"
                 style={{
@@ -49,42 +141,64 @@ const AIAvatar = ({ isSpeaking, status }: AIAvatarProps) => {
                   strokeWidth={1.5}
                 />
               </div>
-            </div>
+            </motion.div>
           </div>
         </div>
 
-        {/* Sound waves - show when speaking */}
-        <div className={`sound-waves ${!isSpeaking ? 'sound-waves-idle' : ''}`}>
-          <div className="sound-wave-bar" />
-          <div className="sound-wave-bar" />
-          <div className="sound-wave-bar" />
-          <div className="sound-wave-bar" />
-          <div className="sound-wave-bar" />
+        {/* Sound waves - GSAP animated */}
+        <div 
+          ref={soundWavesRef}
+          className="absolute -bottom-6 left-1/2 -translate-x-1/2 flex items-end gap-1"
+        >
+          {[...Array(5)].map((_, i) => (
+            <div 
+              key={i}
+              className="gsap-wave-bar w-1 bg-primary rounded-full origin-bottom"
+              style={{ height: `${8 + i * 4}px` }}
+            />
+          ))}
         </div>
       </div>
 
       {/* AI Identity */}
-      <div className="text-center space-y-2">
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3 }}
+        className="text-center space-y-2"
+      >
         <h2 className="text-xl font-semibold text-foreground">Nova</h2>
         <p className="text-sm text-muted-foreground">Your Interview Guide</p>
         
         {/* Status indicator */}
-        <div className="status-indicator mx-auto mt-4">
-          <span 
-            className={`w-2 h-2 rounded-full transition-colors duration-300 ${
+        <motion.div 
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.4 }}
+          className="status-indicator mx-auto mt-4"
+        >
+          <motion.span 
+            className={`w-2 h-2 rounded-full ${
               isSpeaking 
-                ? 'bg-primary animate-pulse' 
+                ? 'bg-primary' 
                 : status === 'listening' 
-                  ? 'bg-success animate-pulse' 
+                  ? 'bg-success' 
                   : 'bg-muted-foreground/50'
-            }`} 
+            }`}
+            animate={{
+              scale: isSpeaking || status === 'listening' ? [1, 1.2, 1] : 1,
+            }}
+            transition={{
+              duration: 0.8,
+              repeat: isSpeaking || status === 'listening' ? Infinity : 0,
+            }}
           />
           <span className="text-muted-foreground capitalize">
             {status === 'idle' ? 'Ready' : status}
           </span>
-        </div>
-      </div>
-    </div>
+        </motion.div>
+      </motion.div>
+    </motion.div>
   );
 };
 

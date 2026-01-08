@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import { Camera, CameraOff, AlertCircle } from 'lucide-react';
 
 interface UserCameraProps {
@@ -57,74 +58,138 @@ const UserCamera = ({ isActive, isCameraOn, isRecording, userName = "You" }: Use
   }, [isCameraOn]);
 
   return (
-    <div className="relative w-full h-full flex items-center justify-center">
-      <div className="video-frame w-full max-w-2xl aspect-video bg-muted">
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.5, delay: 0.2 }}
+      className="relative w-full h-full flex items-center justify-center"
+    >
+      <div className="video-frame w-full max-w-2xl aspect-video bg-muted overflow-hidden">
         {/* Video element */}
-        <video
+        <motion.video
           ref={videoRef}
           autoPlay
           playsInline
           muted
+          initial={{ opacity: 0 }}
+          animate={{ opacity: isCameraOn ? 1 : 0 }}
+          transition={{ duration: 0.3 }}
           className={`w-full h-full object-cover ${isCameraOn ? 'block' : 'hidden'}`}
           style={{ transform: 'scaleX(-1)' }}
         />
 
         {/* Camera off state */}
         {!isCameraOn && !isLoading && !error && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-secondary/80">
-            <div className="p-4 rounded-full bg-muted/50">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+            className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-secondary/80"
+          >
+            <motion.div 
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 0.3 }}
+              className="p-4 rounded-full bg-muted/50"
+            >
               <CameraOff className="w-12 h-12 text-muted-foreground" />
-            </div>
+            </motion.div>
             <p className="text-muted-foreground">Camera is off</p>
-          </div>
+          </motion.div>
         )}
 
         {/* Loading state */}
         {isLoading && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-secondary/80">
-            <div className="p-4 rounded-full bg-muted/50 animate-pulse">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-secondary/80"
+          >
+            <motion.div 
+              animate={{ scale: [1, 1.1, 1] }}
+              transition={{ duration: 1, repeat: Infinity }}
+              className="p-4 rounded-full bg-muted/50"
+            >
               <Camera className="w-12 h-12 text-primary" />
-            </div>
+            </motion.div>
             <p className="text-muted-foreground">Initializing camera...</p>
-          </div>
+          </motion.div>
         )}
 
         {/* Error state */}
         {error && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-secondary/80 p-6">
-            <div className="p-4 rounded-full bg-destructive/20">
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-secondary/80 p-6"
+          >
+            <motion.div 
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              className="p-4 rounded-full bg-destructive/20"
+            >
               <AlertCircle className="w-12 h-12 text-destructive" />
-            </div>
+            </motion.div>
             <p className="text-muted-foreground text-center text-sm max-w-xs">{error}</p>
-          </div>
+          </motion.div>
         )}
 
         {/* Recording indicator */}
         {isRecording && isCameraOn && (
-          <div className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-background/80 backdrop-blur-sm">
-            <span className="recording-dot" />
+          <motion.div 
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="absolute top-4 left-4 flex items-center gap-2 px-3 py-1.5 rounded-full bg-background/80 backdrop-blur-sm"
+          >
+            <motion.span 
+              animate={{ opacity: [1, 0.5, 1], scale: [1, 1.1, 1] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+              className="w-2.5 h-2.5 rounded-full bg-destructive"
+            />
             <span className="text-sm font-medium text-destructive">REC</span>
-          </div>
+          </motion.div>
         )}
 
         {/* User name badge */}
-        <div className="absolute bottom-4 left-4 px-3 py-1.5 rounded-lg bg-background/80 backdrop-blur-sm">
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="absolute bottom-4 left-4 px-3 py-1.5 rounded-lg bg-background/80 backdrop-blur-sm"
+        >
           <span className="text-sm font-medium text-foreground">{userName}</span>
-        </div>
+        </motion.div>
 
         {/* Connection quality indicator */}
         {isCameraOn && !error && (
-          <div className="absolute bottom-4 right-4 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/80 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="absolute bottom-4 right-4 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/80 backdrop-blur-sm"
+          >
             <div className="flex gap-0.5">
-              <div className="w-1 h-3 rounded-full bg-success" />
-              <div className="w-1 h-4 rounded-full bg-success" />
-              <div className="w-1 h-5 rounded-full bg-success" />
+              <motion.div 
+                animate={{ opacity: [0.7, 1, 0.7] }}
+                transition={{ duration: 2, repeat: Infinity, delay: 0 }}
+                className="w-1 h-3 rounded-full bg-success" 
+              />
+              <motion.div 
+                animate={{ opacity: [0.7, 1, 0.7] }}
+                transition={{ duration: 2, repeat: Infinity, delay: 0.2 }}
+                className="w-1 h-4 rounded-full bg-success" 
+              />
+              <motion.div 
+                animate={{ opacity: [0.7, 1, 0.7] }}
+                transition={{ duration: 2, repeat: Infinity, delay: 0.4 }}
+                className="w-1 h-5 rounded-full bg-success" 
+              />
             </div>
             <span className="text-xs text-muted-foreground">HD</span>
-          </div>
+          </motion.div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 };
 
