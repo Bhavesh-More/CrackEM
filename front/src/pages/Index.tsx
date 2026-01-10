@@ -34,6 +34,7 @@ const Index = () => {
   const [isCameraOn, setIsCameraOn] = useState(true);
   const [status, setStatus] = useState<InterviewStatus>('idle');
   const [mounted, setMounted] = useState(false);
+  const [meetID, setMeetID] = useState<string | null>(null);
   
   // Auth state
   const [user, setUser] = useState<{ name: string; email: string } | null>(null);
@@ -44,7 +45,7 @@ const Index = () => {
   const { volumeLevel } = useAudioAnalyzer(isInterviewActive && isMicOn);
   
   // Speech recognition - sends transcripts to backend for grammar checking
-  useSpeechRecognition(isInterviewActive && isMicOn);
+  useSpeechRecognition(isInterviewActive && isMicOn, meetID ?? undefined);
 
   useEffect(() => {
     setMounted(true);
@@ -73,22 +74,25 @@ const Index = () => {
     
     try {
       // Generate random 15-20 char hash for meetID
-      const meetID = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      const generatedMeetID = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       
       // Call backend to create meet
-      await api.createMeet(meetID);
+      await api.createMeet(generatedMeetID);
 
       // Wait 2 seconds
       await new Promise(resolve => setTimeout(resolve, 2000));
 
       // Fetch welcome message
-      const welcomeData = await api.welcome(meetID);
+      const welcomeData = await api.welcome(generatedMeetID);
       setWelcomeMessage(welcomeData.message);
 
       // Speak the welcome message
       const utterance = new SpeechSynthesisUtterance(welcomeData.message);
       window.speechSynthesis.speak(utterance);
       
+      // store meetID so speech hook can include it in the WebSocket
+      setMeetID(generatedMeetID);
+
       setIsInterviewActive(true);
       setCurrentQuestionIndex(0);
       setStatus('speaking');
@@ -102,6 +106,7 @@ const Index = () => {
     setIsInterviewActive(false);
     setCurrentQuestionIndex(0);
     setStatus('idle');
+    setMeetID(null);
   }, []);
 
   const handleToggleMic = useCallback(() => {

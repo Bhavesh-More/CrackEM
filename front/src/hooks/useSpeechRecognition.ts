@@ -11,7 +11,7 @@ interface UseSpeechRecognitionReturn {
  * Hook for speech recognition using Web Speech API
  * Sends transcribed text to backend via WebSocket
  */
-export const useSpeechRecognition = (isEnabled: boolean): UseSpeechRecognitionReturn => {
+export const useSpeechRecognition = (isEnabled: boolean, meetID?: string): UseSpeechRecognitionReturn => {
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const isRecognizingRef = useRef(false);
@@ -28,17 +28,20 @@ export const useSpeechRecognition = (isEnabled: boolean): UseSpeechRecognitionRe
     }
 
     try {
-      wsRef.current.send(JSON.stringify({
+      const payload: any = {
         type,
         text: sentence.trim()
-      }));
+      };
+      if (meetID) payload.meetID = meetID;
+
+      wsRef.current.send(JSON.stringify(payload));
       if (clearBuffer && type === 'transcript') {
         sentenceBufferRef.current = '';
       }
     } catch (error) {
       console.error('Error sending transcript:', error);
     }
-  }, []);
+  }, [meetID]);
 
   const handleResult = useCallback((event: SpeechRecognitionEvent) => {
     const lastResult = event.results[event.results.length - 1];
@@ -101,12 +104,21 @@ export const useSpeechRecognition = (isEnabled: boolean): UseSpeechRecognitionRe
     }
 
     try {
-      // Create WebSocket connection
-      const wsUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws/transcript';
+      // Create WebSocket connection (include meetID if available)
+      const wsUrlBase = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws/transcript';
+      const wsUrl = meetID ? `${wsUrlBase}?meetID=${encodeURIComponent(meetID)}` : wsUrlBase;
       const ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
         console.log('WebSocket connection established');
+        // send a small meta message so server can capture meetID if needed
+        if (meetID) {
+          try {
+            ws.send(JSON.stringify({ type: 'meta', meetID }));
+          } catch (e) {
+            // ignore
+          }
+        }
       };
 
       ws.onerror = (error) => {
@@ -135,16 +147,31 @@ export const useSpeechRecognition = (isEnabled: boolean): UseSpeechRecognitionRe
             sendSentence(sentenceBufferRef.current, 'transcript', true);
           }
         }
+
+        // For transient errors, try to restart recognition so we keep listening
+        const transientErrors = ['no-speech', 'audio-capture', 'network', 'aborted'];
+        if (isRecognizingRef.current && transientErrors.includes(event.error)) {
+          setTimeout(() => {
+            try {
+              recognition.start();
+            } catch (e) {
+              // ignore start errors
+            }
+          }, 200);
+        }
       };
+
       recognition.onend = () => {
         handleEnd();
-        // Auto-restart recognition if still enabled
+        // Auto-restart recognition if still enabled (small delay for reliability)
         if (isRecognizingRef.current && wsRef.current?.readyState === WebSocket.OPEN) {
-          try {
-            recognition.start();
-          } catch (e) {
-            // Recognition might already be starting, ignore error
-          }
+          setTimeout(() => {
+            try {
+              recognition.start();
+            } catch (e) {
+              // ignore
+            }
+          }, 150);
         }
       };
 
