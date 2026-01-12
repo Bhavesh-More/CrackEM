@@ -19,7 +19,7 @@ async def invokeStarterAgent(meetID):
     if not context or not context.strip():
         context = "No previous conversation."
     
-    # print(context)
+    print(context)
     
     prompt = PROMPT_TEMPLATE.replace("<<MEET_HISTORY_FROM_DATABASE>>", context)
     
@@ -52,4 +52,4 @@ async def invokeStarterAgent(meetID):
     print(final_text)
     # No return needed as it is a generator, usage will be consuming the yields
 
-# print(invokeStarterAgent("pro3j789xhenpyh4oodzhl"))
+print(invokeStarterAgent("ka3knmy25kc94bzrvex4gs"))

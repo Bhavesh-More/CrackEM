@@ -21,7 +21,7 @@ export const useSpeechRecognition = (isEnabled: boolean, meetID?: string, onAiRe
 
   const lastInterimSentRef = useRef<number>(0);
   const aiResponseBufferRef = useRef<string>('');
-  const SILENCE_DURATION = 600; // 600ms of silence before sending final sentence
+  const SILENCE_DURATION = 1000; // 600ms of silence before sending final sentence
   const INTERIM_THROTTLE_MS = 400; // send interim updates at most once every 400ms
 
   const sendSentence = useCallback((sentence: string, type: 'transcript' | 'interim' = 'transcript', clearBuffer = false) => {
@@ -34,7 +34,6 @@ export const useSpeechRecognition = (isEnabled: boolean, meetID?: string, onAiRe
         type,
         text: sentence.trim()
       };
-      if (meetID) payload.meetID = meetID;
 
       wsRef.current.send(JSON.stringify(payload));
       if (clearBuffer && type === 'transcript') {
@@ -76,14 +75,14 @@ export const useSpeechRecognition = (isEnabled: boolean, meetID?: string, onAiRe
       }
 
       // Also set a silence timeout to promote interim to final when user pauses
-      silenceTimeoutRef.current = window.setTimeout(() => {
-        if (sentenceBufferRef.current) {
-          sendSentence(sentenceBufferRef.current, 'transcript', true);
-        } else if (interimBufferRef.current) {
-          // Promote interim to final if nothing buffered
-          sendSentence(interimBufferRef.current, 'transcript', true);
-        }
-      }, SILENCE_DURATION);
+      // silenceTimeoutRef.current = window.setTimeout(() => {
+      //   if (sentenceBufferRef.current) {
+      //     sendSentence(sentenceBufferRef.current, 'transcript', true);
+      //   } else if (interimBufferRef.current) {
+      //     // Promote interim to final if nothing buffered
+      //     sendSentence(interimBufferRef.current, 'transcript', true);
+      //   }
+      // }, SILENCE_DURATION);
     }
   }, [sendSentence]);
 
@@ -110,18 +109,6 @@ export const useSpeechRecognition = (isEnabled: boolean, meetID?: string, onAiRe
       const wsUrlBase = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws/transcript';
       const wsUrl = meetID ? `${wsUrlBase}?meetID=${encodeURIComponent(meetID)}` : wsUrlBase;
       const ws = new WebSocket(wsUrl);
-
-      ws.onopen = () => {
-        console.log('WebSocket connection established');
-        // send a small meta message so server can capture meetID if needed
-        if (meetID) {
-          try {
-            ws.send(JSON.stringify({ type: 'meta', meetID }));
-          } catch (e) {
-            // ignore
-          }
-        }
-      };
 
       ws.onerror = (error) => {
         console.error('WebSocket error:', error);
