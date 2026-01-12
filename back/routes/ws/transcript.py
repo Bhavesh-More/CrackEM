@@ -46,9 +46,9 @@ async def websocket_transcript(websocket: WebSocket, meetID: str | None = None):
                         print(f"[USER - interim]: {interim}", flush=True)
 
                 # --- Capture meetID if sent later ---
-                if message.get("meetID") and not meetID:
-                    meetID = message.get("meetID")
-                    logger.info(f"Received meetID from client message: {meetID}")
+                # if message.get("meetID") and not meetID:
+                #     meetID = message.get("meetID")
+                #     logger.info(f"Received meetID from client message: {meetID}")
 
                 # --- Final transcript message ---
                 if message.get("type") == "transcript" and message.get("text"):
@@ -92,9 +92,8 @@ async def websocket_transcript(websocket: WebSocket, meetID: str | None = None):
                             # newS = newS.strip()
                             # print(f"[ENHANCED]: {newS}", flush=True)
 
-                            # Save to DB
-                            if meetID:
-                                putMessage(meetID, text_snapshot, "user")
+                            # Save to DB=
+                            putMessage(meetID, text_snapshot, "user")
 
                             # --- Stream agent response ---
                             async for chunk in startAgent(meetID):
